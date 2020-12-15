@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CMakeWorkspace" PROJECT_DIR="$PROJECT_DIR$" />
+  <component name="ProjectPlainTextFileTypeManager">
+    <file url="file://$PROJECT_DIR$/cmake-build-debug/output0.csv" />
+    <file url="file://$PROJECT_DIR$/cmake-build-debug/output1.csv" />
+    <file url="file://$PROJECT_DIR$/cmake-build-debug/output2.csv" />
+    <file url="file://$PROJECT_DIR$/cmake-build-debug/output3.csv" />
+    <file url="file://$PROJECT_DIR$/cmake-build-debug/output4.csv" />
+    <file url="file://$PROJECT_DIR$/cmake-build-debug/output5.csv" />
+  </component>
+</project>
