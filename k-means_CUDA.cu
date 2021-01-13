@@ -30,22 +30,23 @@ __device__ double doubleAtomicAdd(double *address, double val) {
 
 
 __global__ void update_centroids(double* device_centroids, double* centroids_details, bool* iterate) {
+
     int unsigned id_centroid = blockDim.x * blockIdx.x + threadIdx.x;
 
     double centroid_x_new, centroid_y_new, centroid_x_old, centroid_y_old = 0;
 
     if (id_centroid < NUM_CENTROIDS) {
 
-        centroid_x_new = centroids_details[id_centroid * POINT_SIZE + 0] / centroids_details[id_centroid * POINT_SIZE + 2];
-        centroid_y_new = centroids_details[id_centroid * POINT_SIZE + 1] / centroids_details[id_centroid * POINT_SIZE + 2];
+        centroid_x_new = centroids_details[id_centroid + (NUM_CENTROIDS * 0)] / centroids_details[id_centroid + (NUM_CENTROIDS * 2)];
+        centroid_y_new = centroids_details[id_centroid + (NUM_CENTROIDS * 1)] / centroids_details[id_centroid + (NUM_CENTROIDS * 2)];
 
-        centroid_x_old = device_centroids[id_centroid * POINT_SIZE + 0];
-        centroid_y_old = device_centroids[id_centroid * POINT_SIZE + 1];
+        centroid_x_old = device_centroids[id_centroid + (NUM_CENTROIDS * 0)];
+        centroid_y_old = device_centroids[id_centroid + (NUM_CENTROIDS * 1)];
 
         if(!check_tollerance(centroid_x_old, centroid_x_new, centroid_y_old, centroid_y_new)) {
             *iterate = true;
-            device_centroids[id_centroid * POINT_SIZE + 0] = centroid_x_new;
-            device_centroids[id_centroid * POINT_SIZE + 1] = centroid_y_new;
+            device_centroids[id_centroid + (NUM_CENTROIDS * 0)] = centroid_x_new;
+            device_centroids[id_centroid + (NUM_CENTROIDS * 1)] = centroid_y_new;
         }
     }
 }
@@ -71,16 +72,16 @@ __global__ void assign_clusters(double* device_dataset, double* device_centroids
     if (id_punto < NUM_POINTS) {
         double punto_x, punto_y, centroid_x, centroid_y = 0;
 
-        punto_x = device_dataset[id_punto * POINT_SIZE + 0];
-        punto_y = device_dataset[id_punto * POINT_SIZE + 1];
+        punto_x = device_dataset[id_punto + (NUM_POINTS * 0)];
+        punto_y = device_dataset[id_punto + (NUM_POINTS * 1)];
 
         long best_centroid_id = 0;
         double distMIN = INFINITY;
 
         for (int i = 0; i < NUM_CENTROIDS; i++) {
 
-            centroid_x = device_centroids[i * POINT_SIZE + 0];
-            centroid_y = device_centroids[i * POINT_SIZE + 1];
+            centroid_x = device_centroids[i + (NUM_CENTROIDS * 0)];
+            centroid_y = device_centroids[i + (NUM_CENTROIDS * 1)];
 
             auto dist = distance(punto_x, centroid_x, punto_y, centroid_y);
             if (dist < distMIN) {
@@ -89,10 +90,10 @@ __global__ void assign_clusters(double* device_dataset, double* device_centroids
             }
         }
 
-        device_dataset[id_punto * POINT_SIZE + 2] = best_centroid_id;
-        doubleAtomicAdd(&centroids_details[best_centroid_id * POINT_SIZE + 0], punto_x);
-        doubleAtomicAdd(&centroids_details[best_centroid_id * POINT_SIZE + 1], punto_y);
-        doubleAtomicAdd(&centroids_details[best_centroid_id * POINT_SIZE + 2], 1);
+        device_dataset[id_punto + (NUM_POINTS * 2)] = best_centroid_id;
+        doubleAtomicAdd(&centroids_details[best_centroid_id + (NUM_CENTROIDS * 0)], punto_x);
+        doubleAtomicAdd(&centroids_details[best_centroid_id + (NUM_CENTROIDS * 1)], punto_y);
+        doubleAtomicAdd(&centroids_details[best_centroid_id + (NUM_CENTROIDS * 2)], 1);
     }
 }
 

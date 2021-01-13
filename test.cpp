@@ -9,125 +9,9 @@
 #include "point.h"
 #include "k-means_SEQ.h"
 #include "k-means_OPENMP.h"
+#include "utilities.h"
+
 #include "k-means_CUDA.cuh"
-
-void generate_random_dataset(int nr_points) {
-    std::random_device rd;
-    std::mt19937 generator(rd());
-    std::uniform_real_distribution<double> distribution(0.0, 1.0);
-
-    const std::string rand_dataset_name =
-            "rand_dataset_" + std::to_string(nr_points) +
-            ".txt";
-
-    const std::string rand_dataset_path = "../datasets/" + rand_dataset_name;
-    if (!(std::ifstream(rand_dataset_path))) {
-        std::ofstream rand_dataset_file(rand_dataset_path);
-        for (auto i = 0; i < nr_points; i++) {
-            for (auto j = 0; j < 2; j++) {
-                rand_dataset_file << distribution(generator) << " ";
-            }
-            rand_dataset_file << "\n";
-        }
-        rand_dataset_file.close();
-
-        std::cout << "Random Dataset Generated: " + rand_dataset_name + "\n";
-    }
-
-
-
-}
-
-
-void load_dataset(std::vector<Point> &dataset, std::ifstream &dataset_file) {
-    std::cout << "Loading dataset in progress ...\n";
-    std::string file_line, word;
-
-    while (getline(dataset_file, file_line)) {
-
-        std::istringstream string_stream(file_line);
-        std::vector<std::string> row;
-
-        while(getline(string_stream, word, ' ')){
-            row.push_back(word);
-        }
-
-        dataset.emplace_back(stod(row[0]), stod(row[1]));
-
-    }
-}
-
-
-std::vector<Point> generate_initial_centroids(const std::vector<Point> &dataset, const long num_clusters) {
-    std::vector<Point> initial_centroids(num_clusters);
-    std::vector<int> random_vector(dataset.size());
-    std::iota(random_vector.begin(), random_vector.end(), 0);
-    std::shuffle(random_vector.begin(), random_vector.end(), std::mt19937(std::random_device()()));
-    for (auto i = 0; i < num_clusters; i++) {
-        initial_centroids[i] = dataset[random_vector[i]];
-        initial_centroids[i].cluster = i;
-    }
-    return initial_centroids;
-}
-
-
-void
-transform_into_array(const std::vector<Point> &data, const int num_rows, const int num_columns, double *array) {
-    for (auto i = 0; i < num_rows; i++) {
-        array[i * num_columns] = data[i].x;
-        array[i * num_columns + 1] = data[i].y;
-        array[i * num_columns + 2] = data[i].cluster;
-
-        /*
-        std::cout << array[i * num_columns] << std::endl;
-        std::cout << array[i * num_columns + 1] << std::endl;
-        std::cout << array[i * num_columns + 2] << std::endl;
-*/
-
-    }
-}
-
-void transform_from_array(const double *array, std::vector<Point> vector, const int num_elements, const int num_dimensions){
-    double x, y = 0;
-    int c = 0;
-    for(auto i = 0; i < num_elements; i++){
-        x = array[i * num_dimensions + 0];
-        y = array[i * num_dimensions + 1];
-        c = array[i * num_dimensions + 2];
-        //std::cout << x << "' " << y << "' " << c << std::endl;
-        vector.emplace_back(x, y, c);
-    }
-}
-
-void print_array(const double *array, const int num_elements, const int num_dimensions){
-    double x, y = 0;
-    int c = 0;
-    for(auto i = 0; i < num_elements; i++){
-        x = array[i * num_dimensions + 0];
-        y = array[i * num_dimensions + 1];
-        c = array[i * num_dimensions + 2];
-        std::cout << x << "' " << y << "' " << c << std::endl;
-
-    }
-}
-
-
-
-void draw_chart_gnu(vector<Point> &points){
-
-    ofstream outfile("data.txt");
-
-    for(auto point : points){
-
-        outfile << point.x << " " << point.y << " " << point.cluster<< std::endl;
-
-    }
-
-    outfile.close();
-    system("gnuplot -p -e \"plot 'data.txt' using 1:2:3 with points palette notitle\"");
-    remove("data.txt");
-
-}
 
 
 int main () {
@@ -169,8 +53,8 @@ int main () {
     std::cout << "Execution Time: " << sequential_execution_time << " s\n\n";
 
     std::cout << "PRINTING CENTROIDS\n";
-    transform_into_array(final_centroids, num_clusters, num_dimensions, testArrayCentroids);
-    print_array(testArrayCentroids, num_clusters, num_dimensions);
+    transform_into_array(final_centroids, num_clusters, testArrayCentroids);
+    print_array(testArrayCentroids, num_clusters);
 
     try{
         printf("Drawing the chart...\n");
@@ -190,8 +74,8 @@ int main () {
     std::cout << "Execution Time: " << OPENMP_execution_time << " s\n\n";
 
     std::cout << "PRINTING CENTROIDS\n";
-    transform_into_array(final_centroids, num_clusters, num_dimensions, testArrayCentroids);
-    print_array(testArrayCentroids, num_clusters, num_dimensions);
+   transform_into_array(final_centroids, num_clusters, testArrayCentroids);
+    print_array(testArrayCentroids, num_clusters);
 
     try{
         printf("Drawing the chart...\n");
@@ -206,8 +90,8 @@ int main () {
     auto *host_dataset = (double *) malloc(num_bytes_dataset);
     auto *host_centroids = (double *) malloc(num_bytes_centroids);
 
-    transform_into_array(dataset, num_points, num_dimensions, host_dataset);
-    transform_into_array(initial_centroids, num_clusters, num_dimensions, host_centroids);
+    transform_into_array(dataset, num_points, host_dataset);
+    transform_into_array(initial_centroids, num_clusters, host_centroids);
 
     double *device_dataset, *device_centroids;
     CUDA_CHECK_RETURN(cudaMalloc((void **) &device_dataset, num_bytes_dataset));
@@ -227,10 +111,10 @@ int main () {
     CUDA_CHECK_RETURN(cudaMemcpy(host_centroids, device_centroids, num_bytes_centroids, cudaMemcpyDeviceToHost));
 
     std::cout << "PRINTING THE HOST_CENTROIDS AFTER CUDA \n";
-    print_array(host_centroids, num_clusters, num_dimensions);
+    print_array(host_centroids, num_clusters);
 
-    transform_from_array(host_dataset, final_dataset, num_points, num_dimensions);
-    transform_from_array(host_centroids, final_centroids, num_clusters, num_dimensions);
+    transform_from_array(host_dataset, final_dataset, num_points);
+    transform_from_array(host_centroids, final_centroids, num_clusters);
 
 
     CUDA_CHECK_RETURN(cudaFree(device_dataset));
