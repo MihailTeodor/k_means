@@ -19,7 +19,7 @@ void assign_clusters_OPENMP(vector<Point>* points, vector<Point>* centroids, vec
 
         (*points)[i].cluster = bestCluster;
 #pragma omp atomic
-            (*centroids_details)[bestCluster].x += (*points)[i].x;
+        (*centroids_details)[bestCluster].x += (*points)[i].x;
 #pragma omp atomic
         (*centroids_details)[bestCluster].y += (*points)[i].y;
 #pragma omp atomic
